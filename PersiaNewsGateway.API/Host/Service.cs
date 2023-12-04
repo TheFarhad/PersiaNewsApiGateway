@@ -1,26 +1,25 @@
 ﻿namespace PersiaNewsGateway.API.Host;
 
-using Steeltoe.Discovery.Client;
+using PersiaNewsGateway.API.Extentions;
 using ProxyProvider;
+using Steeltoe.Discovery.Client;
 
 public static class Service
 {
-    public static void Host(string[] args) => WebApplication.CreateBuilder(args).Services().Middlewares();
+    public static void Host(string[] args) => WebApplication.CreateBuilder(args).Services().Pipeline();
 
     public static WebApplication Services(this WebApplicationBuilder source)
     {
-        var configuration = source.Configuration;
         source
             .Services
-            .AddDiscoveryClient(configuration)
+            .AddDiscoveryClient() //source.Configuration
             .AddReverseProxy()
-        //.LoadFromConfig(configuration.GetSection("ReverseProxy"))
-        .LoadFromEureka(source.Services);
+           .LoadFromEureka(source.Services);
 
         return source.Build();
     }
 
-    public static void Middlewares(this WebApplication source)
+    public static void Pipeline(this WebApplication source)
     {
         source.MapReverseProxy();
         source.Run();

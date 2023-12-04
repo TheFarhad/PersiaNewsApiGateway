@@ -1,43 +1,43 @@
 ﻿namespace PersiaNewsGateway.API.ProxyProvider;
 
-using Steeltoe.Discovery;
-using Steeltoe.Discovery.Eureka;
 using System.Threading;
 using System.Threading.Tasks;
+using Steeltoe.Discovery;
+using Steeltoe.Discovery.Eureka;
 using Yarp.ReverseProxy.Configuration;
 
-internal class ProxyConfigProvider : BackgroundService, IProxyConfigProvider
+internal class PersiaNewsProxyConfigProvider : BackgroundService, IProxyConfigProvider
 {
-    private ProxyConfig _config;
-    private List<RouteConfig> _routes;
-    private readonly DiscoveryClient _client;
+    private PersiaNewsProxyConfig _proxyConfig;
+    private List<RouteConfig> _routesConfig;
+    private readonly DiscoveryClient _discoveryClient;
 
-    public ProxyConfigProvider(IDiscoveryClient client)
+    public PersiaNewsProxyConfigProvider(IDiscoveryClient client)
     {
-        _client = client as DiscoveryClient;
-        SetRoutes();
+        _discoveryClient = (DiscoveryClient)client; //client as DiscoveryClient
+        RoutesConfig();
         PopulateConfig();
     }
 
-    public IProxyConfig GetConfig() => _config;
+    public IProxyConfig GetConfig() => _proxyConfig;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!stoppingToken.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested)
         {
             PopulateConfig();
             await Task.Delay(30000, stoppingToken);
         }
     }
 
-    private void SetRoutes()
+    private void RoutesConfig()
     {
-        _routes = new()
+        _routesConfig = new()
         {
             new RouteConfig
             {
                 RouteId = "BasicInfoRoute",
-                ClusterId = "BasicInfo",
+                ClusterId = "BASICINFO",
                 Match = new RouteMatch  { Path = "bi/{**catch-all}"  },
                 Transforms = new List<Dictionary<string, string>>
                 {
@@ -47,7 +47,7 @@ internal class ProxyConfigProvider : BackgroundService, IProxyConfigProvider
             new RouteConfig
             {
                  RouteId = "NewsCMSRoute",
-                ClusterId = "NewsCMS",
+                ClusterId = "NEWSCMS",
                 Match = new RouteMatch { Path = "news/{**catch-all}" },
                 Transforms = new List<Dictionary<string, string>>
                 {
@@ -59,33 +59,31 @@ internal class ProxyConfigProvider : BackgroundService, IProxyConfigProvider
 
     private void PopulateConfig()
     {
-        var clusters = new List<ClusterConfig>();
+        var _clustersConfig = new List<ClusterConfig>();
 
-        _client
+        _discoveryClient
             .Applications
             .GetRegisteredApplications()
             .ToList()
             .ForEach(_ =>
             {
-                clusters.Add(new ClusterConfig
+                _clustersConfig.Add(new ClusterConfig
                 {
-                    LoadBalancingPolicy = "RoundRobin",
+                    LoadBalancingPolicy = LoadBalancingPolicy.RoundRobin,
                     ClusterId = _.Name,
-                    Destinations = _.Instances.Select(e => new
+                    Destinations = _.Instances.Select(__ => new
                     {
-                        Id = e.InstanceId,
+                        Id = __.InstanceId,
                         config = new DestinationConfig
                         {
-                            Address = $"http://{e.HostName}:{e.Port}"
+                            Address = $"http://{__.HostName}:{__.Port}"
                         }
                     }).ToDictionary(e => e.Id, e => e.config)
                 });
             });
 
-        var temp = _config;
-        _config = new(_routes, clusters);
+        var temp = _proxyConfig;
+        _proxyConfig = new(_routesConfig, _clustersConfig);
         temp?.Signal();
     }
 }
-
-

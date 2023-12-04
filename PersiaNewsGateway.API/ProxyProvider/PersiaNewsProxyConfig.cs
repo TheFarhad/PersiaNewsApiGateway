@@ -3,14 +3,14 @@
 using Microsoft.Extensions.Primitives;
 using Yarp.ReverseProxy.Configuration;
 
-internal class ProxyConfig : IProxyConfig
+internal class PersiaNewsProxyConfig : IProxyConfig
 {
-    public IReadOnlyList<RouteConfig> Routes { get; private set; }
-    public IReadOnlyList<ClusterConfig> Clusters { get; private set; }
+    public IReadOnlyList<RouteConfig> Routes { get; }
+    public IReadOnlyList<ClusterConfig> Clusters { get; }
     public IChangeToken ChangeToken { get; private set; }
     private readonly CancellationTokenSource _cancellationToken = new();
 
-    public ProxyConfig(IReadOnlyList<RouteConfig> routes, IReadOnlyList<ClusterConfig> clusters)
+    public PersiaNewsProxyConfig(IReadOnlyList<RouteConfig> routes, IReadOnlyList<ClusterConfig> clusters)
     {
         Routes = routes;
         Clusters = clusters;
